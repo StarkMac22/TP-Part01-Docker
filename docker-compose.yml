@@ -1,0 +1,52 @@
+
+services:
+  database:
+    image: tp-database:1.0
+    container_name: tp-database
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: usr
+      POSTGRES_PASSWORD: pwd
+    volumes:
+      - bafe619100dce490558644aedc03c48a90c58b84facbfe1bc28dd6b645714543:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  backend:
+    image: tp-backend:1.0
+    container_name: tp-backend
+    depends_on:
+      - database
+    networks:
+      - app-network
+    ports:
+      - "8080:8080"
+
+  httpd:
+    image: tp-httpd:1.1
+    container_name: tp-httpd
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    ports:
+      - "8082:80"
+
+  adminer:
+    image: adminer
+    container_name: tp-adminer
+    depends_on:
+      - database
+    networks:
+      - app-network
+    ports:
+      - "8081:8080"
+
+networks:
+  app-network:
+    external: true
+    name: app-network
+
+volumes:
+  bafe619100dce490558644aedc03c48a90c58b84facbfe1bc28dd6b645714543:
+    external: true
