@@ -376,3 +376,30 @@ Les avantages sont les suivants :
 - **Centralisation :** les versions des images sont regroupées dans un même registre.
 
 Il faut toutefois gérer les droits d’accès et éviter de publier des secrets ou des données sensibles dans les images.
+
+
+
+# Réponses aux questions — TP2  
+
+## 2-1 Que sont les conteneurs de test ?
+
+Ce sont simplement des bibliothèques Java qui vous permettent d'exécuter un tas de conteneurs Docker pendant les tests. Ici, nous utilisons le conteneur postgresql pour nous connecter à notre application lors des tests
+
+## 2-2 Dans quel but devons-nous utiliser des variables sécurisées ?
+
+Nous devons utiliser des variables sécurisées pour protéger les informations sensibles, comme les mots de passe, les tokens d'accès et les clés API.
+Dans GitHub Actions, elles permettent de stocker ces informations dans les Secrets du dépôt et de les utiliser dans le workflow sans écrire leurs valeurs directement dans le code.
+
+
+## 2-3 Pourquoi avons-nous mis les besoins : build-and-test-backend sur ce travail ? Essayez peut-être sans cela et vous verrez !
+
+Nous avons mis needs: test-backend pour que le job de construction et de publication des images Docker ne s'exécute qu'après la réussite des tests du backend.
+- Si test-backend réussit, le job build-and-push-docker-image peut démarrer.
+- Si test-backend échoue, le job de construction et de publication est ignoré.
+
+## 2-4 Dans quel but devons-nous pousser des images Docker ?
+
+Nous devons pousser les images Docker vers un registre comme Docker Hub afin de les stocker et de pouvoir les partager et les déployer sur d'autres machines ou serveurs.
+
+
+## 2-4 Dans quel but devons-nous pousser des images Docker ?

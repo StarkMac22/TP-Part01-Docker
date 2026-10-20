@@ -25,6 +25,15 @@ jobs:
       - name: Build and test with Maven
         run: mvn clean verify --file ./backend/pom.xml
 
+      - name: Analyze with SonarQube
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          mvn -B verify
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          --file ./backend/pom.xml
+          -Dsonar.projectKey=StarkMac22_TP-Part01-Docker
+
 
   # define job to build and publish docker image
   build-and-push-docker-image:
