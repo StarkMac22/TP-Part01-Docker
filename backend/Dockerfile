@@ -1,5 +1,6 @@
 
-FROM eclipse-temurin:21-jdk-alpine AS myapp-build$# Build Main.java with JDK
+FROM eclipse-temurin:21-jdk-alpine AS myapp-build
+# Build Main.java with JDK
 # TODO : in next steps (not now)
 
 ENV MYAPP_HOME=/opt/myapp
