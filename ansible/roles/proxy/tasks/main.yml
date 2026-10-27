@@ -7,7 +7,7 @@
     restart_policy: unless-stopped
     pull: always
     published_ports:
-      - "8082:80"
+      - "8080:80"
     networks:
       - name: app-network
     networks_cli_compatible: true

@@ -6,8 +6,7 @@
     state: started
     restart_policy: unless-stopped
     pull: always
-    published_ports:
-      - "8080:8080"
+    published_ports: []
     networks:
       - name: app-network
     networks_cli_compatible: true
