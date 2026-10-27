@@ -1,0 +1,13 @@
+---
+- name: Deploy Vue.js frontend container
+  community.docker.docker_container:
+    name: tp-frontend
+    image: "{{ frontend_image | default('yand10/tp-frontend:1.0') }}"
+    state: started
+    restart_policy: unless-stopped
+    pull: always
+    networks:
+      - name: app-network
+    networks_cli_compatible: true
+  vars:
+    ansible_python_interpreter: /opt/docker_venv/bin/python

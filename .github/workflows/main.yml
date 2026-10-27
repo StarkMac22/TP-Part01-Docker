@@ -73,6 +73,14 @@ jobs:
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: yand10/tp-httpd:${{ github.sha }}
 
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          platforms: linux/amd64
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: yand10/tp-frontend:${{ github.sha }}
+
   deploy:
     needs: build-and-push-docker-image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -109,6 +117,7 @@ jobs:
           ansible-playbook -i inventories/setup.yml playbook.yml \
             -e "backend_image=yand10/tp-backend:${{ github.sha }}" \
             -e "database_image=yand10/tp-database:${{ github.sha }}" \
+            -e "frontend_image=yand10/tp-frontend:${{ github.sha }}" \
             -e "proxy_image=yand10/tp-httpd:${{ github.sha }}"
 
       - name: Verify API health
