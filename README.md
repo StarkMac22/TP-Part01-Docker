@@ -402,4 +402,143 @@ Nous avons mis needs: test-backend pour que le job de construction et de publica
 Nous devons pousser les images Docker vers un registre comme Docker Hub afin de les stocker et de pouvoir les partager et les déployer sur d'autres machines ou serveurs.
 
 
-## 2-4 Dans quel but devons-nous pousser des images Docker ?
+# 2- Sonarcloud ?
+
+SonarCloud est un outil en ligne qui analyse automatiquement le code d'un projet pour détecter les bugs, les problèmes de sécurité et les erreurs de qualité.
+
+# 2- CD ?
+Le CD (Continuous Delivery ou Continuous Deployment) est une pratique qui permet d'automatiser la livraison ou le déploiement d'une application après les tests.
+
+
+
+
+
+# Réponses aux questions — TP3 Ansible
+
+## 3-1. Inventaire et commandes de base
+
+### Inventaire Ansible
+
+J'ai  créé le fichier `ansible/inventories/setup.yml` pour définir mon serveur distant Takima.
+
+L'inventaire contient :
+- Le groupe `prod`, qui représente l'environnement de production.
+- L'adresse du serveur distant.
+- L'utilisateur SSH `admin`.
+- Le chemin vers la clé privée SSH permettant l'authentification.
+
+Cet inventaire permet à Ansible de savoir sur quelle machine exécuter ses tâches.
+
+### Commandes utilisées
+
+**1. Tester la connexion au serveur**
+
+```bash
+ansible all -i inventories/setup.yml -m ping
+```
+
+Le module `ping` vérifie que la connexion SSH et l'exécution distante fonctionnent. Le résultat `SUCCESS` avec `pong` confirme que le serveur est accessible.
+
+**2. Récupérer les informations du serveur**
+
+```bash
+ansible all -i inventories/setup.yml -m setup -a "filter=ansible_distribution*"
+```
+
+Le module `setup` récupère les informations système appelées *facts*.
+
+Nous avons identifié un serveur Debian 12.7 (Bookworm), utilisant Python 3.11.
+
+**3. Désinstaller Apache**
+
+```bash
+ansible all -i inventories/setup.yml -m apt -a "name=apache2 state=absent" --become
+```
+
+Le module `apt` permet de gérer les paquets Debian. `state=absent` demande la suppression d'Apache, tandis que `--become` permet d'obtenir les privilèges administrateur.
+
+Le résultat `CHANGED` confirme que le paquet Apache a été supprimé.
+
+### Idempotence
+
+Ansible fonctionne selon le principe d'idempotence : si le serveur est déjà dans l'état demandé, relancer une tâche ne provoque pas de modification inutile.
+
+Par exemple, après avoir supprimé Apache, relancer la même commande doit produire `changed: false`.
+
+
+
+## 3-2. Utilisation des rôles Ansible
+
+Nous avons créé un rôle Docker avec la commande :
+
+```bash
+ansible-galaxy init roles/docker
+```
+
+Un rôle Ansible permet de regrouper des tâches liées à une fonctionnalité afin de rendre le projet plus organisé, réutilisable et facile à maintenir.
+
+Nous avons déplacé les tâches d'installation de Docker dans `roles/docker/tasks/main.yml`.
+
+Le fichier `playbook.yml` appelle désormais ce rôle :
+
+```yaml
+- name: Configure Docker server
+  hosts: all
+  gather_facts: true
+  become: true
+
+  roles:
+    - docker
+```
+
+Nous avons ensuite vérifié son fonctionnement avec :
+
+```bash
+ansible-playbook -i inventories/setup.yml playbook.yml
+```
+
+Résultat : `ok=12 changed=0 unreachable=0 failed=0`.
+
+Le rôle fonctionne correctement et aucune modification supplémentaire n'a été nécessaire, ce qui démontre l'idempotence d'Ansible.
+
+
+
+
+
+### Question 3-3 — Configuration des tâches `docker_container`
+
+J'ai utilisé le module `community.docker.docker_container` d'Ansible pour automatiser le déploiement de mes conteneurs Docker sur mon serveur distant.
+
+Ce module permet de créer, configurer et démarrer des conteneurs Docker sans utiliser directement la commande `docker run`.
+
+Voici les principaux paramètres utilisés :
+
+- **`name`** : définit le nom du conteneur (`tp-database`, `tp-backend`, `tp-httpd`).
+- **`image`** : indique l'image Docker à utiliser, récupérée depuis Docker Hub.
+- **`state: started`** : garantit que le conteneur est démarré.
+- **`restart_policy: unless-stopped`** : permet de redémarrer automatiquement le conteneur, sauf s'il a été arrêté volontairement.
+- **`published_ports`** : permet d'exposer les ports du conteneur sur le serveur.
+- **`networks`** : connecte les conteneurs au réseau Docker `app-network` pour qu'ils puissent communiquer.
+- **`env`** : définit les variables d'environnement nécessaires, notamment pour la connexion à PostgreSQL.
+- **`volumes`** : permet de conserver les données PostgreSQL même si le conteneur est supprimé et recréé.
+- **`pull: always`** : demande à Docker de vérifier et récupérer l'image depuis le registre avant le déploiement, lorsqu'il est utilisé.
+
+Cette configuration permet d'automatiser le déploiement, de faciliter la maintenance et d'assurer l'idempotence des tâches Ansible.
+
+
+### Sécurité du déploiement continu
+
+Non, déployer automatiquement chaque nouvelle image Docker n'est pas totalement sécurisé.
+
+Une nouvelle image peut contenir des bugs, des vulnérabilités ou du code malveillant. Son déploiement automatique pourrait provoquer une panne de l'application ou compromettre le serveur.
+
+Pour améliorer la sécurité, il est préférable de :
+
+- **Exécuter des tests automatiques** avant chaque déploiement.
+- **Analyser les images Docker** pour détecter les vulnérabilités.
+- **Utiliser des versions précises ou des digests d'images** plutôt que le tag `latest`.
+- **Exiger une validation manuelle** avant le déploiement en production.
+- **Protéger les secrets** avec GitHub Actions Secrets.
+- **Prévoir un rollback** pour revenir rapidement à une version précédente en cas de problème.
+
+Ainsi, le déploiement continu reste automatisé, mais seules les versions vérifiées et approuvées peuvent être déployées en production.

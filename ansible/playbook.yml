@@ -1,0 +1,12 @@
+---
+- name: Deploy application on Docker server
+  hosts: all
+  gather_facts: true
+  become: true
+
+  roles:
+    - docker
+    - network
+    - database
+    - backend
+    - proxy

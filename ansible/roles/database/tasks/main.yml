@@ -1,0 +1,26 @@
+---
+- name: Create PostgreSQL persistent volume
+  community.docker.docker_volume:
+    name: tp-postgres-data
+    state: present
+  vars:
+    ansible_python_interpreter: /opt/docker_venv/bin/python
+
+- name: Deploy PostgreSQL container
+  community.docker.docker_container:
+    name: tp-database
+    image: "{{ database_image | default('yand10/tp-database:1.0') }}"
+    state: started
+    restart_policy: unless-stopped
+    pull: always
+    env:
+      POSTGRES_DB: db
+      POSTGRES_USER: usr
+      POSTGRES_PASSWORD: pwd
+    volumes:
+      - tp-postgres-data:/var/lib/postgresql/data
+    networks:
+      - name: app-network
+    networks_cli_compatible: true
+  vars:
+    ansible_python_interpreter: /opt/docker_venv/bin/python

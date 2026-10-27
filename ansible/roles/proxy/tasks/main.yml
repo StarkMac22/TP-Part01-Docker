@@ -1,0 +1,15 @@
+---
+- name: Deploy Apache HTTPD reverse proxy
+  community.docker.docker_container:
+    name: tp-httpd
+    image: "{{ proxy_image | default('yand10/tp-httpd:1.1') }}"
+    state: started
+    restart_policy: unless-stopped
+    pull: always
+    published_ports:
+      - "8082:80"
+    networks:
+      - name: app-network
+    networks_cli_compatible: true
+  vars:
+    ansible_python_interpreter: /opt/docker_venv/bin/python

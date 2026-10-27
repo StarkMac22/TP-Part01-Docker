@@ -1,0 +1,19 @@
+---
+- name: Deploy Spring Boot backend container
+  community.docker.docker_container:
+    name: tp-backend
+    image: "{{ backend_image | default('yand10/tp-backend:1.0') }}"
+    state: started
+    restart_policy: unless-stopped
+    pull: always
+    published_ports:
+      - "8080:8080"
+    networks:
+      - name: app-network
+    networks_cli_compatible: true
+    env:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://tp-database:5432/db"
+      SPRING_DATASOURCE_USERNAME: "usr"
+      SPRING_DATASOURCE_PASSWORD: "pwd"
+  vars:
+    ansible_python_interpreter: /opt/docker_venv/bin/python
