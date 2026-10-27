@@ -14,13 +14,14 @@
     restart_policy: unless-stopped
     pull: always
     env:
-      POSTGRES_DB: db
-      POSTGRES_USER: usr
-      POSTGRES_PASSWORD: pwd
+      POSTGRES_DB: "{{ vault_postgres_db }}"
+      POSTGRES_USER: "{{ vault_postgres_user }}"
+      POSTGRES_PASSWORD: "{{ vault_postgres_password }}"
     volumes:
       - tp-postgres-data:/var/lib/postgresql/data
     networks:
       - name: app-network
     networks_cli_compatible: true
+  no_log: true
   vars:
     ansible_python_interpreter: /opt/docker_venv/bin/python

@@ -91,30 +91,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Ansible and Docker collection
+      - name: Validate Vault configuration
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
-          ansible-galaxy collection install community.docker
+          test -n "$ANSIBLE_VAULT_PASSWORD" || { echo "Missing ANSIBLE_VAULT_PASSWORD secret"; exit 1; }
+          test -f ansible/vars/vault.yml || { echo "Initialize and add the encrypted Vault file first"; exit 1; }
+          grep -q '^[$]ANSIBLE_VAULT;' ansible/vars/vault.yml || { echo "Vault file must be encrypted"; exit 1; }
 
-      - name: Configure SSH
+      - name: Build Ansible controller image
+        run: docker build -t tp-ansible:${{ github.sha }} ./ansible/controller
+
+      - name: Configure deployment secrets
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          umask 077
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_HOST"
+          mkdir -p "$RUNNER_TEMP/tp-deploy-secrets"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$RUNNER_TEMP/tp-deploy-secrets/id_rsa"
+          printf '%s\n' "$ANSIBLE_VAULT_PASSWORD" > "$RUNNER_TEMP/tp-deploy-secrets/vault-password"
+          ssh-keyscan -H "$SSH_HOST" > "$RUNNER_TEMP/tp-deploy-secrets/known_hosts"
+
+      - name: Check Ansible syntax
+        run: |
+          docker run --rm \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/ansible,dst=/work,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/tp-deploy-secrets,dst=/run/secrets,readonly" \
+            -e ANSIBLE_SSH_PRIVATE_KEY_FILE=/run/secrets/id_rsa \
+            tp-ansible:${{ github.sha }} \
+            -i inventories/setup.yml playbook.yml \
+            --vault-password-file /run/secrets/vault-password --syntax-check
 
       - name: Deploy with Ansible
-        working-directory: ./ansible
-        env:
-          ANSIBLE_SSH_PRIVATE_KEY_FILE: /home/runner/.ssh/id_rsa
         run: |
-          ansible-playbook -i inventories/setup.yml playbook.yml \
+          docker run --rm \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/ansible,dst=/work,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/tp-deploy-secrets,dst=/run/secrets,readonly" \
+            -e ANSIBLE_SSH_PRIVATE_KEY_FILE=/run/secrets/id_rsa \
+            tp-ansible:${{ github.sha }} \
+            -i inventories/setup.yml playbook.yml \
+            --vault-password-file /run/secrets/vault-password \
             -e "backend_image=yand10/tp-backend:${{ github.sha }}" \
             -e "database_image=yand10/tp-database:${{ github.sha }}" \
             -e "frontend_image=yand10/tp-frontend:${{ github.sha }}" \
@@ -127,3 +147,7 @@ jobs:
           curl --fail --silent --show-error \
             --retry 10 --retry-delay 5 --retry-connrefused \
             "http://${SSH_HOST}:8080/api/actuator/health"
+
+      - name: Remove deployment secrets
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/tp-deploy-secrets"

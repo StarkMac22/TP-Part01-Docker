@@ -11,8 +11,9 @@
       - name: app-network
     networks_cli_compatible: true
     env:
-      SPRING_DATASOURCE_URL: "jdbc:postgresql://tp-database:5432/db"
-      SPRING_DATASOURCE_USERNAME: "usr"
-      SPRING_DATASOURCE_PASSWORD: "pwd"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://tp-database:5432/{{ vault_postgres_db }}"
+      SPRING_DATASOURCE_USERNAME: "{{ vault_postgres_user }}"
+      SPRING_DATASOURCE_PASSWORD: "{{ vault_postgres_password }}"
+  no_log: true
   vars:
     ansible_python_interpreter: /opt/docker_venv/bin/python

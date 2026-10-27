@@ -3,6 +3,16 @@
   hosts: all
   gather_facts: true
   become: true
+  vars_files:
+    - vars/vault.yml
+  pre_tasks:
+    - name: Validate required database variables
+      ansible.builtin.assert:
+        that:
+          - vault_postgres_db is defined and vault_postgres_db | length > 0
+          - vault_postgres_user is defined and vault_postgres_user | length > 0
+          - vault_postgres_password is defined and vault_postgres_password | length > 0
+      no_log: true
   roles:
     - docker
     - network

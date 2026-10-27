@@ -1,2 +1,10 @@
 .DS_Store
 **/target/
+
+# Local deployment secrets and plaintext Vault working files
+.secrets/
+.vault-pass*
+.vault_password*
+*.vault-password
+ansible/vars/*.plain.*
+ansible/vars/*.decrypted.*
